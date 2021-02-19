@@ -1,12 +1,13 @@
 /*
  * Copyright (c) 2013-2015 Freescale Semiconductor, Inc.
+ * Copyright 2016-2020 NXP
  * All rights reserved.
- * 
+ *
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include "blfwk/stdafx.h"
 #include "blfwk/StIntelHexFile.h"
+#include "blfwk/stdafx.h"
 #ifdef LINUX
 #include <string.h>
 #endif
@@ -186,14 +187,21 @@ void StIntelHexFile::parseLine(std::string &inLine)
     if (newRecord.m_dataCount)
     {
         uint8_t *data = new uint8_t[newRecord.m_dataCount];
-        for (unsigned i = 0; i < newRecord.m_dataCount; ++i)
+        try
         {
-            int dataByte = readHexByte(inLine, INTELHEX_DATA_START_CHAR_INDEX + i * 2);
-            data[i] = dataByte;
-            checksum += dataByte;
+            for (unsigned i = 0; i < newRecord.m_dataCount; ++i)
+            {
+                int dataByte = readHexByte(inLine, INTELHEX_DATA_START_CHAR_INDEX + i * 2);
+                data[i] = dataByte;
+                checksum += dataByte;
+            }
+            newRecord.m_data = data;
         }
-
-        newRecord.m_data = data;
+        catch (...)
+        {
+            delete[] data;
+            throw;
+        }
     }
 
     // read and compare checksum byte

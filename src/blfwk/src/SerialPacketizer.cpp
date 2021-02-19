@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2013-2014 Freescale Semiconductor, Inc.
+ * Copyright 2015-2020 NXP.
  * All rights reserved.
  *
  *
@@ -103,7 +104,7 @@ void SerialPacketizer::host_delay(uint32_t milliseconds)
 #if defined(WIN32)
     Sleep(milliseconds);
 #elif defined(LINUX) || defined(MACOSX)
-    usleep(milliseconds);
+    usleep(milliseconds * 1000);
 #endif
 }
 
@@ -134,7 +135,12 @@ status_t SerialPacketizer::ping(
         {
             double timeout = 0.500;
             double duration = 0.0;
+#if defined(WIN32)
             clock_t start = clock();
+#else //#elif defined(LINUX) || defined(MACOSX)
+            struct timespec start;
+            clock_gettime(CLOCK_REALTIME, &start);
+#endif
 
             // Try for half a second to get a response from the ping.
             while (duration < timeout)
@@ -150,8 +156,15 @@ status_t SerialPacketizer::ping(
 
                 host_delay(kReadDelayMilliseconds);
 
+#if defined(WIN32)
                 // Windows: CLOCKS_PER_SEC = 1,000, Linux & MACOSX: CLOCKS_PER_SEC = 1,000,000.
                 duration = (double)(clock() - start) / CLOCKS_PER_SEC;
+#else //#elif defined(LINUX) || defined(MACOSX)
+                struct timespec current;
+                clock_gettime(CLOCK_REALTIME, &current);
+                duration =
+                    (double)(current.tv_sec - start.tv_sec) + (double)(current.tv_nsec - start.tv_nsec) / 1000000000;
+#endif
             }
 
             // If we got our start byte, move on to read the response packet
@@ -600,7 +613,8 @@ status_t SerialPacketizer::read_header(framing_header_t *header)
 // See SerialPacketizer.h for documentation on this function.
 status_t SerialPacketizer::read_length(framing_data_packet_t *packet)
 {
-    union {
+    union
+    {
         uint8_t bytes[sizeof(uint16_t)];
         uint16_t halfword;
     } buffer;
@@ -615,7 +629,8 @@ status_t SerialPacketizer::read_length(framing_data_packet_t *packet)
 // See SerialPacketizer.h for documentation on this function.
 status_t SerialPacketizer::read_crc16(framing_data_packet_t *packet)
 {
-    union {
+    union
+    {
         uint8_t bytes[sizeof(uint16_t)];
         uint16_t halfword;
     } buffer;

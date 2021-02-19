@@ -1,14 +1,16 @@
 /*
  * Copyright (c) 2013-2014 Freescale Semiconductor, Inc.
+ * Copyright 2015-2020 NXP
  * All rights reserved.
  *
- * 
+ *
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
 #include <ios>
 #include <stdexcept>
 #include <stdio.h>
+
 #include "blfwk/StELFFile.h"
 #include "blfwk/EndianUtilities.h"
 
@@ -16,6 +18,7 @@
 //!
 StELFFile::StELFFile(std::istream &inStream)
     : m_stream(inStream)
+    , m_elfVariant(eIllegalVariant)
 {
     readFileHeaders();
 }
@@ -218,10 +221,12 @@ uint8_t *StELFFile::readSectionData(const Elf32_Shdr &inHeader)
     }
     catch (StELFFileException)
     {
+        delete[] sectionData;
         throw;
     }
     catch (...)
     {
+        delete[] sectionData;
         throw StELFFileException("error reading section data");
     }
 
@@ -283,10 +288,12 @@ uint8_t *StELFFile::readSegmentData(const Elf32_Phdr &inHeader)
     }
     catch (StELFFileException)
     {
+        delete[] segmentData;
         throw;
     }
     catch (...)
     {
+        delete[] segmentData;
         throw StELFFileException("error reading segment data");
     }
 
@@ -338,6 +345,7 @@ StELFFile::SectionDataInfo &StELFFile::getCachedSectionData(unsigned inSectionIn
     SectionDataInfo info;
     info.m_data = data;
     info.m_size = header.sh_size;
+    info.m_swapped = false;
 
     m_sectionDataCache[inSectionIndex] = info;
     return m_sectionDataCache[inSectionIndex];

@@ -1,15 +1,18 @@
 /*
  * Copyright (c) 2013-2014 Freescale Semiconductor, Inc.
+ * Copyright 2015-2020 NXP
  * All rights reserved.
  *
- * 
+ *
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include <stdexcept>
-#include <algorithm>
-#include <string.h>
 #include <stdio.h>
+#include <string.h>
+
+#include <algorithm>
+#include <stdexcept>
+
 #include "blfwk/StExecutableImage.h"
 
 StExecutableImage::StExecutableImage(int inAlignment)
@@ -252,9 +255,6 @@ void StExecutableImage::cropRegionToFilter(MemoryRegion &region, const AddressFi
     {
         region.m_data = new uint8_t[newLength];
         memcpy(region.m_data, &oldData[cropFrom - firstByte], newLength);
-
-        // dispose of old data
-        delete[] oldData;
     }
 
     // create a new region for any part of the original region that was past
@@ -275,6 +275,12 @@ void StExecutableImage::cropRegionToFilter(MemoryRegion &region, const AddressFi
         }
 
         insertOrMergeRegion(newRegion);
+    }
+
+    if (region.m_type == TEXT_REGION && oldData)
+    {
+        // dispose of old data
+        delete[] oldData;
     }
 }
 

@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2013-2014 Freescale Semiconductor, Inc.
+ * Copyright 2015-2020 NXP
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -78,7 +79,7 @@ protected:
     //! @param port OS file path for COM port. For example "COM1" on Windows.
     //! @param speed Port speed, e.g. 9600.
     bool init(const char *port, long speed);
-    char port_name[255];                     //!< Port name
+    char *port_name;                         //!< Port name
     int m_fileDescriptor;                    //!< Port file descriptor.
     uint8_t m_buffer[kDefaultMaxPacketSize]; //!< Buffer for bytes used to build read packet.
 };

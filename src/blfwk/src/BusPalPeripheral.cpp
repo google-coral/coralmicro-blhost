@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2013-2014 Freescale Semiconductor, Inc.
+ * Copyright 2015-2020 NXP.
  * All rights reserved.
  *
  *
@@ -41,7 +42,10 @@ BusPalUartPeripheral::BusPalUartPeripheral(const char *port, long speed, const B
 // See BusPalUartPeripheral.h for documentation of this method.
 BusPalUartPeripheral::~BusPalUartPeripheral()
 {
-    free(m_busPal);
+    if (m_busPal)
+    {
+        free(m_busPal);
+    }
 }
 
 // See BusPalUartPeripheral.h for documentation of this method.

@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2013-2015, Freescale Semiconductor, Inc.
+ * Copyright 2016-2020 NXP.
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -9,7 +10,9 @@
 #define _Command_h_
 
 #include <assert.h>
+
 #include <array>
+
 #include "BusPal.h"
 #include "DataSource.h"
 #include "Packetizer.h"
@@ -62,8 +65,10 @@ const cmd_t kCommand_FlashReadResource(kCommandTag_FlashReadResource, 0x00008000
 const cmd_t kCommand_ConfigureMemory(kCommandTag_ConfigureMemory, 0x00010000, "configure-memory");
 const cmd_t kCommand_ReliableUpdate(kCommandTag_ReliableUpdate, 0x00020000, "reliable-update");
 const cmd_t kCommand_GenerateKeyBlob(kCommandTag_GenerateKeyBlob, 0x00040000, "generate-key-blob");
-const cmd_t kCommand_Reserved(0x00, 0x00080000, "reserved");
+const cmd_t kCommand_FuseProgram(kCommandTag_FuseProgram, 0x00080000, "fuse-program");
 const cmd_t kCommand_KeyProvisioning(kCommandTag_KeyProvisioning, 0x00100000, "key-provisioning");
+const cmd_t kCommand_TrustProvisioning(kCommandTag_TrustProvisioning, 0x00200000, "trust-provisioning");
+const cmd_t kCommand_FuseRead(kCommandTag_FuseRead, 0x00400000, "fuse-read");
 // Command for Bus Pal.
 const cmd_t kCommand_ConfigureI2c(kCommandTag_ConfigureI2c, 0x00020000, "i2c");
 const cmd_t kCommand_ConfigureSpi(kCommandTag_ConfigureSpi, 0x00040000, "spi");
@@ -79,7 +84,7 @@ const cmd_t kCommand_EfuseReadOnce(0x00, 0x00000000, "efuse-read-once");
 const cmd_t kCommand_LoadImage(0x00, 0x00000000, "load-image");
 const cmd_t kCommand_ProgramAESKey(0x00, 0x00000000, "program-aeskey");
 
-const array<const cmd_t, 26> kCommands = { kCommand_FlashEraseAll,
+const array<const cmd_t, 23> kCommands = { kCommand_FlashEraseAll,
                                            kCommand_FlashEraseRegion,
                                            kCommand_ReadMemory,
                                            kCommand_WriteMemory,
@@ -98,13 +103,61 @@ const array<const cmd_t, 26> kCommands = { kCommand_FlashEraseAll,
                                            kCommand_ConfigureMemory,
                                            kCommand_ReliableUpdate,
                                            kCommand_GenerateKeyBlob,
-                                           kCommand_Reserved,
+                                           kCommand_FuseProgram,
                                            kCommand_KeyProvisioning,
-                                           kCommand_ConfigureI2c,
-                                           kCommand_ConfigureSpi,
-                                           kCommand_ConfigureCan,
-                                           kCommand_FlashImage,
-                                           kCommand_ListMemory };
+                                           kCommand_TrustProvisioning,
+                                           kCommand_FuseRead };
+//@}
+
+//! @name option tags, names.
+//@{
+struct opt_t
+{
+    uint32_t tag;
+    const char *const name;
+
+    opt_t(uint32_t tag, const char *name)
+        : tag(tag)
+        , name(name)
+    {
+    }
+};
+
+/*!< Operations of trust provisioning command. */
+/*!< OEM trusted facility commands. */
+const opt_t kOperation_Tp_OemGenMasterShare(kTrustProvisioning_Operation_Oem_GenMasterShare, "oem_gen_master_share");
+const opt_t kOperation_Tp_OemSetMasterShare(kTrustProvisioning_Operation_Oem_SetMasterShare, "oem_set_master_share");
+const opt_t kOperation_Tp_OemGetCustCertDicePuk(kTrustProvisioning_Operation_Oem_GetCustCertDicePuk,
+                                                "oem_get_cust_cert_dice_puk");
+const opt_t kOperation_Tp_HsmGenKey(kTrustProvisioning_Operation_Hsm_GenKey, "hsm_gen_key");
+const opt_t kOperation_Tp_HsmStoreKey(kTrustProvisioning_Operation_Hsm_StoreKey, "hsm_store_key");
+const opt_t kOperation_Tp_HsmEncryptBlock(kTrustProvisioning_Operation_Hsm_EncryptBlock, "hsm_enc_blk");
+const opt_t kOperation_Tp_HsmEncryptSign(kTrustProvisioning_Operation_Hsm_EncryptSign, "hsm_enc_sign");
+/*!< NXP factory commands. */
+const opt_t kOperation_Tp_NxpRtsGetId(kTrustProvisioning_Operation_Nxp_RtsGetId, "nxp_rts_get_id");
+const opt_t kOperation_Tp_NxpRtsInsertCertificate(kTrustProvisioning_Operation_Nxp_RtsInsertCertificate,
+                                                  "nxp_rts_ins_cert");
+const opt_t kOperation_Tp_NxpSsfInsertCertificate(kTrustProvisioning_Operation_Nxp_SsfInsertCertificate,
+                                                  "nxp_ssf_ins_cert");
+/*!< OEM/CM factory commands. */
+const opt_t kOperation_Tp_DevAuthChallengeNxp(kTrustProvisioning_Operation_Dev_AuthChallengeNxp,
+                                              "dev_auth_challenge_nxp");
+const opt_t kOperation_Tp_DevAuthChallengeOem(kTrustProvisioning_Operation_Dev_AuthChallengeOem,
+                                              "dev_auth_challenge_oem");
+const opt_t kOperation_Tp_DevSetWrapData(kTrustProvisioning_Operation_Dev_SetWrapData, "dev_set_wrap_data");
+
+/* HSM GEN KEY - key type definition. */
+const opt_t kKeyType_Tp_HsmGenKey_MfwIsK(kKeyType_HsmGenKey_MfwIsK, "MFWISK");
+const opt_t kKeyType_Tp_HsmGenKey_MfwEncK(kKeyType_HsmGenKey_MfwEncK, "MFWENCK");
+const opt_t kKeyType_Tp_HsmGenKey_GenSignK(kKeyType_HsmGenKey_GenSignK, "SIGNK");
+const opt_t kKeyType_Tp_HsmGenKey_GenCustMkSK(kKeyType_HsmGenKey_GenCustMkSK, "CUSTMKSK");
+/* HSM STORE KEY - key type definition. */
+const opt_t kKeyType_Tp_HsmStoreKey_CKDFK(kKeyType_HsmStoreKey_CKDFK, "CKDFK");
+const opt_t kKeyType_Tp_HsmStoreKey_HKDFK(kKeyType_HsmStoreKey_HKDFK, "HKDFK");
+const opt_t kKeyType_Tp_HsmStoreKey_HMACK(kKeyType_HsmStoreKey_HMACK, "HMACK");
+const opt_t kKeyType_Tp_HsmStoreKey_CMACK(kKeyType_HsmStoreKey_CMACK, "CMACK");
+const opt_t kKeyType_Tp_HsmStoreKey_AESK(kKeyType_HsmStoreKey_AESK, "AESK");
+const opt_t kKeyType_Tp_HsmStoreKey_KUOK(kKeyType_HsmStoreKey_KUOK, "KUOK");
 //@}
 
 //! @name Property tags.
@@ -153,9 +206,10 @@ const property_t kProperty_ReliableUpdateStatus(kPropertyTag_ReliableUpdateStatu
 const property_t kProperty_FlashPageSize(kPropertyTag_FlashPageSize, "flash-page-size");
 const property_t kProperty_IrqNotifierPin(kPropertyTag_IrqNotifierPin, "irq-notify-pin");
 const property_t kProperty_FfrKeystoreUpdateOpt(kPropertyTag_FfrKeystoreUpdateOpt, "ffr-keystore_update-opt");
+const property_t kProperty_ByteWriteTimeoutMs(kPropertyTag_ByteWriteTimeoutMs, "byte-write-timeout-ms");
 const property_t kProperty_Invalid(kPropertyTag_InvalidProperty, "invalid-property");
 
-typedef array<const property_t, 30> PropertyArray;
+typedef array<const property_t, 31> PropertyArray;
 
 const PropertyArray kProperties = { kProperty_ListProperties,
                                     kProperty_CurrentVersion,
@@ -186,6 +240,7 @@ const PropertyArray kProperties = { kProperty_ListProperties,
                                     kProperty_ReliableUpdateStatus,
                                     kProperty_FlashPageSize,
                                     kProperty_IrqNotifierPin,
+                                    kProperty_ByteWriteTimeoutMs,
                                     kProperty_FfrKeystoreUpdateOpt };
 //@}
 
@@ -386,8 +441,7 @@ protected:
     //! @brief Constants.
     enum _command_packet_constants
     {
-        kMaxCommandArguments = (kDefaultMaxPacketSize - sizeof(command_packet_t)) /
-                               sizeof(uint32_t) //!< 7 args max for packet size 32 bytes
+        kMaxCommandArguments = 16 //!< 16 args max
     };
 
     //! Format of command packet.
@@ -461,6 +515,98 @@ public:
         m_packet.m_arguments[2] = arg3;
         m_packet.m_arguments[3] = arg4;
         m_packet.m_arguments[4] = arg5;
+    }
+
+    //! @brief Constructor that takes four command arguments.
+    CommandPacket(uint8_t tag,
+                  uint8_t flags,
+                  uint32_t arg1,
+                  uint32_t arg2,
+                  uint32_t arg3,
+                  uint32_t arg4,
+                  uint32_t arg5,
+                  uint32_t arg6)
+    {
+        m_numArguments = 6;
+        m_packet.init(tag, flags, m_numArguments);
+        m_packet.m_arguments[0] = arg1;
+        m_packet.m_arguments[1] = arg2;
+        m_packet.m_arguments[2] = arg3;
+        m_packet.m_arguments[3] = arg4;
+        m_packet.m_arguments[4] = arg5;
+        m_packet.m_arguments[5] = arg6;
+    }
+
+    //! @brief Constructor that takes four command arguments.
+    CommandPacket(uint8_t tag,
+                  uint8_t flags,
+                  uint32_t arg1,
+                  uint32_t arg2,
+                  uint32_t arg3,
+                  uint32_t arg4,
+                  uint32_t arg5,
+                  uint32_t arg6,
+                  uint32_t arg7)
+    {
+        m_numArguments = 7;
+        m_packet.init(tag, flags, m_numArguments);
+        m_packet.m_arguments[0] = arg1;
+        m_packet.m_arguments[1] = arg2;
+        m_packet.m_arguments[2] = arg3;
+        m_packet.m_arguments[3] = arg4;
+        m_packet.m_arguments[4] = arg5;
+        m_packet.m_arguments[5] = arg6;
+        m_packet.m_arguments[6] = arg7;
+    }
+
+    //! @brief Constructor that takes four command arguments.
+    CommandPacket(uint8_t tag,
+                  uint8_t flags,
+                  uint32_t arg1,
+                  uint32_t arg2,
+                  uint32_t arg3,
+                  uint32_t arg4,
+                  uint32_t arg5,
+                  uint32_t arg6,
+                  uint32_t arg7,
+                  uint32_t arg8)
+    {
+        m_numArguments = 8;
+        m_packet.init(tag, flags, m_numArguments);
+        m_packet.m_arguments[0] = arg1;
+        m_packet.m_arguments[1] = arg2;
+        m_packet.m_arguments[2] = arg3;
+        m_packet.m_arguments[3] = arg4;
+        m_packet.m_arguments[4] = arg5;
+        m_packet.m_arguments[5] = arg6;
+        m_packet.m_arguments[6] = arg7;
+        m_packet.m_arguments[7] = arg8;
+    }
+
+    //! @brief Constructor that takes four command arguments.
+    CommandPacket(uint8_t tag,
+                  uint8_t flags,
+                  uint32_t arg1,
+                  uint32_t arg2,
+                  uint32_t arg3,
+                  uint32_t arg4,
+                  uint32_t arg5,
+                  uint32_t arg6,
+                  uint32_t arg7,
+                  uint32_t arg8,
+                  uint32_t arg9)
+    {
+        m_numArguments = 9;
+        m_packet.init(tag, flags, m_numArguments);
+        m_packet.m_arguments[0] = arg1;
+        m_packet.m_arguments[1] = arg2;
+        m_packet.m_arguments[2] = arg3;
+        m_packet.m_arguments[3] = arg4;
+        m_packet.m_arguments[4] = arg5;
+        m_packet.m_arguments[5] = arg6;
+        m_packet.m_arguments[6] = arg7;
+        m_packet.m_arguments[7] = arg8;
+        m_packet.m_arguments[8] = arg9;
     }
 
     //! @brief Get size of command packet, including arguments.
@@ -756,6 +902,7 @@ public:
         assert(dataConsumer);
         m_dataConsumer = dataConsumer;
         m_dataProducer = NULL;
+        m_packetSize = kDefaultMaxPacketSize; /* In fact m_packetSize is not used for Data consumer. */
     }
 
     //! @brief Send data packet to device.
@@ -1267,6 +1414,117 @@ protected:
 };
 
 /*!
+ * @brief Represents the bootloader Fuse Program command.
+ */
+class FuseProgram : public Command
+{
+public:
+    //! @brief Constructor that takes an argument vector.
+    FuseProgram(const string_vector_t *argv)
+        : Command(argv)
+        , m_fileOrData()
+        , m_segment(NULL)
+        , m_startAddress(0)
+        , m_count(0)
+        , m_data()
+        , m_memoryId(kMemoryInternal)
+    {
+    }
+
+    //! @brief Constructor that takes an DataSource::Segment argument
+    FuseProgram(blfwk::DataSource::Segment *segment, uint32_t memoryId)
+        : Command(kCommand_WriteMemory.name)
+        , m_fileOrData()
+        , m_segment(segment)
+        , m_count(0)
+        , m_data()
+        , m_memoryId(memoryId)
+    {
+        m_startAddress = segment->getBaseAddress();
+        m_argv.push_back(format_string("0x%08x", m_startAddress));
+        m_argv.push_back(m_fileOrData);
+        m_argv.push_back(format_string("%d", memoryId));
+    }
+
+    //! @brief Constructor that takes an uchar_vector_t argument
+    FuseProgram(uint32_t address, const uchar_vector_t &data, uint32_t memoryId)
+        : Command(kCommand_WriteMemory.name)
+        , m_fileOrData()
+        , m_segment(NULL)
+        , m_startAddress(address)
+        , m_count(0)
+        , m_data(data)
+        , m_memoryId(memoryId)
+    {
+        m_argv.push_back(format_string("0x%08x", m_startAddress));
+        m_argv.push_back(m_fileOrData);
+        m_argv.push_back(format_string("%d", memoryId));
+    }
+
+    //! @brief Initialize.
+    virtual bool init();
+
+    //! @brief Send command to packetizer.
+    virtual void sendTo(Packetizer &packetizer);
+
+protected:
+    //! @brief Check response packet.
+    virtual bool processResponse(const uint8_t *packet)
+    {
+        return Command::processResponse(reinterpret_cast<const generic_response_packet_t *>(packet),
+                                        kCommandTag_FuseProgram);
+    }
+
+protected:
+    std::string m_fileOrData;              //!< Data file path or hex data string.
+    blfwk::DataSource::Segment *m_segment; //!< DataSource segment (instead of file or hex string).
+    uint32_t m_startAddress;               //!< Destination memory address.
+    uint32_t m_count;                      //!< Number of bytes to write.
+    uchar_vector_t m_data;                 //!< The data to write to the device.
+    uint32_t m_memoryId;                   //!< Memory device ID
+};
+
+/*!
+ * @brief Represents the bootloader Fuse Read command.
+ */
+class FuseRead : public Command
+{
+public:
+    //! @brief Constructor that takes an argument vector.
+    FuseRead(const string_vector_t *argv)
+        : Command(argv)
+        , m_startAddress(0)
+        , m_byteCount(0)
+        , m_dataFile()
+        , m_memoryId(kMemoryInternal)
+    {
+    }
+
+    //! @brief Initialize.
+    virtual bool init();
+
+    //! @brief Send command to packetizer.
+    virtual void sendTo(Packetizer &packetizer);
+
+protected:
+    //! @brief Check response packet.
+    virtual bool processResponse(const read_memory_response_packet_t *packet);
+
+    //! @brief Check generic response packet.
+    virtual bool processResponse(const uint8_t *packet)
+    {
+        return Command::processResponse(reinterpret_cast<const generic_response_packet_t *>(packet),
+                                        kCommandTag_FuseRead);
+    }
+
+protected:
+    std::string m_dataFile;  //!< Data file path.
+    uint32_t m_startAddress; //!< Destination memory address.
+    uint32_t m_byteCount;    //!< Number of bytes to read.
+    uint32_t m_memoryId;     //!< Memory device ID.
+};
+
+/*!
  * @brief Represents the bootloader Load Image command.
  */
 class LoadImage : public Command
@@ -1647,11 +1905,45 @@ protected:
     }
 
 protected:
-    uint32_t m_operation; //!< Destination address.
+    uint32_t m_operation; //!< Key Provisioning Operation.
     uint32_t m_type;
     uint32_t m_memoryId;
     uint32_t m_size;
     string m_fileOrData;
+};
+
+/*!
+ * @brief Represents the bootloader TrustProvisioning command.
+ */
+class TrustProvisioning : public Command
+{
+public:
+    //! @brief Constructor that takes an argument vector.
+    TrustProvisioning(const string_vector_t *argv)
+        : Command(argv)
+        , m_operation(0)
+    {
+    }
+
+    //! @brief Initialize.
+    virtual bool init();
+
+    //! @brief Send command to packetizer.
+    virtual void sendTo(Packetizer &packetizer);
+
+protected:
+    //! @brief Check response packet.
+    virtual bool processResponse(const trust_provisioning_response_packet_t *packet);
+
+    virtual bool processResponse(const uint8_t *packet)
+    {
+        return Command::processResponse(reinterpret_cast<const generic_response_packet_t *>(packet),
+                                        kCommandTag_TrustProvisioning);
+    }
+
+protected:
+    uint32_t m_operation;               //!< Trust Provisioning Operation.
+    trust_provisioning_parms_t m_parms; //!< Parameters of Trust Provsioing Operation.
 };
 
 /*!

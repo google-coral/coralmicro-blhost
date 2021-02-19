@@ -1,15 +1,17 @@
 /*
  * Copyright (c) 2013-2014 Freescale Semiconductor, Inc.
+ * Copyright 2015-2020 NXP.
  * All rights reserved.
  *
- * 
+ *
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include "blfwk/Logging.h"
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+#include "blfwk/Logging.h"
 
 // init global logger to null
 Logger *Log::s_logger = NULL;
@@ -202,11 +204,25 @@ FileLogger::FileLogger(const char *file_path)
 
 FileLogger::~FileLogger()
 {
-    m_logFile.close();
+    try
+    {
+        m_logFile.close();
+    }
+    catch (std::ios_base::failure &e)
+    {
+        printf("Error: Failed to close the log file(%s)", e.what());
+    }
 }
 
 void FileLogger::_log(const char *msg)
 {
     m_logFile << msg;
-    m_logFile.flush();
+    try
+    {
+        m_logFile.flush();
+    }
+    catch (std::ios_base::failure &e)
+    {
+        printf("Error: Failed to write the log file(%s)", e.what());
+    }
 }

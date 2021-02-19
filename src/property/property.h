@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2013-2015, Freescale Semiconductor, Inc.
- * Copyright 2019 NXP
+ * Copyright 2019-2020 NXP
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -10,6 +10,7 @@
 #define _property_h
 
 #include <stdint.h>
+
 #include "bootloader_common.h"
 #include "packet/command_packet.h"
 #if !defined(BOOTLOADER_HOST)
@@ -39,54 +40,43 @@ enum _available_commands
 {
     kAvailableCommands = (
 #if !BL_FEATURE_MIN_PROFILE
-        HAS_CMD(kCommandTag_FlashEraseAll) | HAS_CMD(kCommandTag_FlashEraseRegion) | HAS_CMD(kCommandTag_WriteMemory)
+        HAS_CMD(kCommandTag_FlashEraseAll) | HAS_CMD(kCommandTag_FlashEraseRegion) | HAS_CMD(kCommandTag_WriteMemory) |
+        HAS_CMD(kCommandTag_FuseProgram) | HAS_CMD(kCommandTag_FuseRead)
 #if BL_FEATURE_FLASH_SECURITY
-        |
-        HAS_CMD(kCommandTag_FlashSecurityDisable)
+        | HAS_CMD(kCommandTag_FlashSecurityDisable)
 #endif // BL_FEATURE_ERASEALL_UNSECURE
-        |
-        HAS_CMD(kCommandTag_GetProperty) | HAS_CMD(kCommandTag_Execute) | HAS_CMD(kCommandTag_Reset) |
+        | HAS_CMD(kCommandTag_GetProperty) | HAS_CMD(kCommandTag_Execute) | HAS_CMD(kCommandTag_Reset) |
         HAS_CMD(kCommandTag_SetProperty) | HAS_CMD(kCommandTag_ReadMemory) | HAS_CMD(kCommandTag_FillMemory) |
         HAS_CMD(kCommandTag_ReceiveSbFile) | HAS_CMD(kCommandTag_Call)
 #if BL_FEATURE_ERASEALL_UNSECURE
-        |
-        HAS_CMD(kCommandTag_FlashEraseAllUnsecure)
+        | HAS_CMD(kCommandTag_FlashEraseAllUnsecure)
 #endif // BL_FEATURE_ERASEALL_UNSECURE
-        |
-        HAS_CMD(kCommandTag_FlashReadOnce) | HAS_CMD(kCommandTag_FlashProgramOnce)
+        | HAS_CMD(kCommandTag_FlashReadOnce) | HAS_CMD(kCommandTag_FlashProgramOnce)
 #if !BL_FEATURE_HAS_NO_READ_SOURCE
-        |
-        HAS_CMD(kCommandTag_FlashReadResource)
+        | HAS_CMD(kCommandTag_FlashReadResource)
 #endif // !BL_FEATURE_HAS_NO_READ_SOURCE
 #if BL_FEATURE_QSPI_MODULE || BL_FEATURE_EXPAND_MEMORY
-        |
-        HAS_CMD(kCommandTag_ConfigureMemory)
+        | HAS_CMD(kCommandTag_ConfigureMemory)
 #endif // BL_FEATURE_QSPI_MODULE || BL_FEATURE_EXPAND_MEMORY
 #if BL_FEATURE_RELIABLE_UPDATE
-        |
-        HAS_CMD(kCommandTag_ReliableUpdate)
+        | HAS_CMD(kCommandTag_ReliableUpdate)
 #endif // BL_FEATURE_RELIABLE_UPDATE
 
 #else // BL_FEATURE_MIN_PROFILE
         HAS_CMD(kCommandTag_FlashEraseAll) | HAS_CMD(kCommandTag_FlashEraseRegion) | HAS_CMD(kCommandTag_WriteMemory)
 #if BL_FEATURE_FLASH_SECURITY
-        |
-        HAS_CMD(kCommandTag_FlashSecurityDisable)
+        | HAS_CMD(kCommandTag_FlashSecurityDisable)
 #endif // BL_FEATURE_FLASH_SECURITY
-        |
-        HAS_CMD(kCommandTag_GetProperty) | HAS_CMD(kCommandTag_Execute) | HAS_CMD(kCommandTag_Reset) |
+        | HAS_CMD(kCommandTag_GetProperty) | HAS_CMD(kCommandTag_Execute) | HAS_CMD(kCommandTag_Reset) |
         HAS_CMD(kCommandTag_SetProperty)
 #if BL_FEATURE_READ_MEMORY
-        |
-        HAS_CMD(kCommandTag_ReadMemory)
+        | HAS_CMD(kCommandTag_ReadMemory)
 #endif // BL_FEATURE_READ_MEMORY
 #if BL_FEATURE_FILL_MEMORY
-        |
-        HAS_CMD(kCommandTag_FillMemory)
+        | HAS_CMD(kCommandTag_FillMemory)
 #endif // BL_FEATURE_FILL_MEMORY
 #if BL_FEATURE_ERASEALL_UNSECURE
-        |
-        HAS_CMD(kCommandTag_FlashEraseAllUnsecure)
+        | HAS_CMD(kCommandTag_FlashEraseAllUnsecure)
 #endif // BL_FEATURE_ERASEALL_UNSECURE
 #endif // BL_FEATURE_MIN_PROFILE
             )
@@ -136,6 +126,7 @@ enum _property_tag
     kPropertyTag_FlashPageSize = 0x1b,
     kPropertyTag_IrqNotifierPin = 0x1c,
     kPropertyTag_FfrKeystoreUpdateOpt = 0x1d,
+    kPropertyTag_ByteWriteTimeoutMs = 0x1e,
     kPropertyTag_InvalidProperty = 0xFF,
 };
 
@@ -169,7 +160,6 @@ enum _security_state
     kSecurityState_SKBOOT_Unsecure = 0x5aa55aa5u,
     kSecurityState_SKBOOT_Secure = 0xc33cc33cu,
 };
-
 
 //!@brief CheckStatus ID definitions
 enum __checkstatus_id
@@ -380,50 +370,51 @@ extern const property_interface_t g_propertyInterface;
 ////////////////////////////////////////////////////////////////////////////////
 
 #if __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
-//! @name Property Store
-//@{
+    //! @name Property Store
+    //@{
 
-//! @brief Early initialization function to get user configuration data
-status_t bootloader_property_load_user_config(void);
+    //! @brief Early initialization function to get user configuration data
+    status_t bootloader_property_load_user_config(void);
 
-//! @brief Initialize the property store.
-status_t bootloader_property_init(void);
+    //! @brief Initialize the property store.
+    status_t bootloader_property_init(void);
 
-//! @brief Get a property.
-//!
-//! Example calling sequence for uint32_t property:
-//! @code
-//! void * value;
-//! uint32_t valueSize;
-//! status_t status = bootloader_property_get(sometag, &value, &valueSize);
-//! uint32_t result = *(uint32_t *)value;
-//! @endcode
-//!
-//! @param tag Tag of the requested property
-//! @param memoryId Id for specified external memory, for example: 1 represent QuadSPI 0
-//! @param value Pointer to where to write a pointer to the result, may be NULL
-//! @param valueSize Size in bytes of the property value, may be NULL
-//!
-//! @retval kStatus_Success
-//! @retval kStatus_UnknownProperty
-status_t bootloader_property_get(uint8_t tag, uint32_t memoryId, const void **value, uint32_t *valueSize);
+    //! @brief Get a property.
+    //!
+    //! Example calling sequence for uint32_t property:
+    //! @code
+    //! void * value;
+    //! uint32_t valueSize;
+    //! status_t status = bootloader_property_get(sometag, &value, &valueSize);
+    //! uint32_t result = *(uint32_t *)value;
+    //! @endcode
+    //!
+    //! @param tag Tag of the requested property
+    //! @param memoryId Id for specified external memory, for example: 1 represent QuadSPI 0
+    //! @param value Pointer to where to write a pointer to the result, may be NULL
+    //! @param valueSize Size in bytes of the property value, may be NULL
+    //!
+    //! @retval kStatus_Success
+    //! @retval kStatus_UnknownProperty
+    status_t bootloader_property_get(uint8_t tag, uint32_t memoryId, const void **value, uint32_t *valueSize);
 
-//! @brief Set a property.
-//!
-//! Only uint32_t properties can be set with this function.
-//!
-//! @param tag Tag of the property to set
-//! @param value New property value
-//!
-//! @retval kStatus_Success
-//! @retval kStatus_UnknownProperty
-//! @retval kStatus_ReadOnlyProperty
-status_t bootloader_property_set_uint32(uint8_t tag, uint32_t value);
+    //! @brief Set a property.
+    //!
+    //! Only uint32_t properties can be set with this function.
+    //!
+    //! @param tag Tag of the property to set
+    //! @param value New property value
+    //!
+    //! @retval kStatus_Success
+    //! @retval kStatus_UnknownProperty
+    //! @retval kStatus_ReadOnlyProperty
+    status_t bootloader_property_set_uint32(uint8_t tag, uint32_t value);
 
-//@}
+    //@}
 
 #if __cplusplus
 }

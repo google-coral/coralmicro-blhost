@@ -1,13 +1,14 @@
 /*
  * Copyright (c) 2013-2014 Freescale Semiconductor, Inc.
+ * Copyright 2015-2020 NXP
  * All rights reserved.
  *
- * 
+ *
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include "blfwk/stdafx.h"
 #include "blfwk/StSRecordFile.h"
+#include "blfwk/stdafx.h"
 #ifdef LINUX
 #include <string.h>
 #endif
@@ -219,14 +220,20 @@ void StSRecordFile::parseLine(std::string &inLine)
         int dataStartCharIndex = 4 + addressLength * 2;
         int dataLength = newRecord.m_count - addressLength - 1; // total rem - addr - cksum (in bytes)
         uint8_t *data = new uint8_t[dataLength];
-
-        for (i = 0; i < dataLength; ++i)
+        try
         {
-            int dataByte = readHexByte(inLine, dataStartCharIndex + i * 2);
-            data[i] = dataByte;
-            checksum += dataByte;
+            for (i = 0; i < dataLength; ++i)
+            {
+                int dataByte = readHexByte(inLine, dataStartCharIndex + i * 2);
+                data[i] = dataByte;
+                checksum += dataByte;
+            }
         }
-
+        catch (...)
+        {
+            delete[] data;
+            throw;
+        }
         newRecord.m_data = data;
         newRecord.m_dataCount = dataLength;
     }

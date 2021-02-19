@@ -1,8 +1,9 @@
 /*
  * Copyright (c) 2013-2014 Freescale Semiconductor, Inc.
+ * Copyright 2015-2020 NXP.
  * All rights reserved.
  *
- * 
+ *
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
@@ -17,13 +18,12 @@ Updater::Updater(const Peripheral::PeripheralConfigData &config)
     , m_operation(kUpdaterOperation_Update)
     , m_progressCallback(NULL)
     , m_progress()
+    , m_memoryId(kMemoryInternal)
 {
     m_version = getVersion();
 }
 
-Updater::~Updater()
-{
-}
+Updater::~Updater() {}
 
 // See Updater.h for documentation of this method.
 status_t Updater::flashFirmware(const char *filename, uint32_t base_address, uint32_t memoryId)
@@ -339,6 +339,43 @@ void Updater::writeMemory(uint32_t address, const uchar_vector_t &data)
 }
 
 // See Updater.h for documentation of this method.
+void Updater::fuseProgram(DataSource::Segment *segment)
+{
+    // Inject the write-memory(segment) command.
+    WriteMemory cmd(segment, m_memoryId);
+    cmd.registerProgress(&m_progress);
+    Log::info("inject command '%s'\n", cmd.getName().c_str());
+    inject(cmd);
+
+    uint32_t fw_status = cmd.getResponseValues()->at(0);
+    std::string fw_msg = cmd.getStatusMessage(fw_status);
+
+    // Check the command status
+    if (fw_status != kStatus_Success)
+    {
+        throw std::runtime_error(fw_msg);
+    }
+}
+
+// See Updater.h for documentation of this method.
+void Updater::fuseProgram(uint32_t address, const uchar_vector_t &data)
+{
+    // Inject the write-memory(segment) command.
+    WriteMemory cmd(address, data, m_memoryId);
+    Log::info("inject command '%s'\n", cmd.getName().c_str());
+    inject(cmd);
+
+    uint32_t fw_status = cmd.getResponseValues()->at(0);
+    std::string fw_msg = cmd.getStatusMessage(fw_status);
+
+    // Check the command status
+    if (fw_status != kStatus_Success)
+    {
+        throw std::runtime_error(fw_msg);
+    }
+}
+
+// See Updater.h for documentation of this method.
 status_t Updater::flashFromSourceFile()
 {
     if (!isMemorySupported(m_memoryId))
@@ -356,16 +393,17 @@ status_t Updater::flashFromSourceFile()
     {
         DataSource::Segment *segment = dataSource->getSegmentAt(index);
 
-        if (segment->hasNaturalLocation())
-        {
-            dataSource->setTarget(new NaturalDataTarget());
-        }
-        else
-        {
-            dataSource->setTarget(new ConstantDataTarget(m_base_address));
-        }
         try
         {
+            if (segment->hasNaturalLocation())
+            {
+                dataSource->setTarget(new NaturalDataTarget());
+            }
+            else
+            {
+                dataSource->setTarget(new ConstantDataTarget(m_base_address));
+            }
+
             m_operation.current_task = 0;
             m_operation.tasks[m_operation.current_task].current += segment->getLength();
             if (m_progressCallback)
@@ -380,6 +418,8 @@ status_t Updater::flashFromSourceFile()
             // Ignore this error, and skip to next segment
             if (strcmp(e.what(), Command::getStatusMessage(102 /*kStatus_FlashAddressError*/).c_str()) != 0)
             {
+                delete segment;
+                delete dataSource;
                 throw e;
             }
         }

@@ -367,10 +367,12 @@ static int init_hid_manager(void)
 
     /* Initialize all the HID Manager Objects */
     hid_mgr = IOHIDManagerCreate(kCFAllocatorDefault, kIOHIDOptionsTypeNone);
+    if (!hid_mgr)
+        return -1;
+
     IOHIDManagerSetDeviceMatching(hid_mgr, NULL);
     IOHIDManagerScheduleWithRunLoop(hid_mgr, CFRunLoopGetCurrent(), kCFRunLoopDefaultMode);
-    res = IOHIDManagerOpen(hid_mgr, kIOHIDOptionsTypeNone);
-    return (res == kIOReturnSuccess) ? 0 : -1;
+    return 0;
 }
 
 int HID_API_EXPORT hid_init(void)
@@ -391,7 +393,6 @@ int HID_API_EXPORT hid_exit(void)
     if (hid_mgr)
     {
         /* Close the HID manager. */
-        IOHIDManagerClose(hid_mgr, kIOHIDOptionsTypeNone);
         CFRelease(hid_mgr);
         hid_mgr = NULL;
     }

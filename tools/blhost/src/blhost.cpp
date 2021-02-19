@@ -1,12 +1,13 @@
 /*
  * Copyright (c) 2013-2015 Freescale Semiconductor, Inc.
- * Copyright 2016-2022 NXP
+ * Copyright 2016-2020 NXP
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
 #include <cstring>
+
 #include "blfwk/Bootloader.h"
 #include "blfwk/SerialPacketizer.h"
 #include "blfwk/UsbHidPacketizer.h"
@@ -30,7 +31,7 @@ using namespace std;
 const char k_toolName[] = "blhost";
 
 //! @brief Current version number for the tool.
-const char k_version[] = "2.6.2";
+const char k_version[] = "2.6.6";
 
 //! @brief Copyright string.
 const char k_copyright[] =
@@ -193,6 +194,7 @@ const char k_commandUsage[] =
     27                         Flash page size, <index> is required\n\
     28                         Interrupt notifier pin\n\
     29                         FFR key store update option\n\
+    30                         Byte write timeout in milliseconds\n\
   set-property <tag> <value>\n\
     10                         Verify Writes flag\n\
     22                         Read margin level of program flash\n\
@@ -205,6 +207,7 @@ const char k_commandUsage[] =
                                <value>:\n\
                                    0 for Keyprovisioning\n\
                                    1 for write-memory\n\
+    30                         Byte write timeout in milliseconds\n\
   flash-erase-region <addr> <byte_count> [memory_id]\n\
                                Erase a region of flash according to [memory_id].\n\
   flash-erase-all [memory_id]  Erase all flash according to [memory_id],\n\
@@ -242,12 +245,31 @@ const char k_commandUsage[] =
                                Read Resource from special-purpose\n\
                                non-volatile memory and write to file\n\
                                or stdout if no file specified\n\
+  efuse-program-once <addr> <data> [nolock/lock]\n\
+                               Program one word of OCOTP Field \n\
+                               <addr> is ADDR of OTP word, not the shadowed memory address.\n\
+                               <data> is hex digits without prefix '0x'\n\
+  efuse-read-once <addr>\n\
+                               Read one word of OCOTP Field\n\
+                               <addr> is ADDR of OTP word, not the shadowed memory address.\n\
   configure-memory <memory_id> <internal_addr>\n\
                                Apply configuration block at internal memory address\n\
                                <internal_addr> to memory with ID <memory_id>\n\
   reliable-update <addr>\n\
                                Copy backup app from address to main app region\n\
                                or swap flash using indicator address\n\
+  generate-key-blob <dek_file> <blob_file> [key_sel]\n\
+                               Generate the Blob for a given DEK\n\
+                               <dek_file> - input, a binary DEK(128/192/256 bits) generated\n\
+                               by CST tool.\n\
+                               <blob_file> - output, a generated blob in binary format.\n\
+                               [key_sel] - optional input, select the BKEK used to wrap\n\
+                               the BK and generate the blob. For devices with SNVS, valid\n\
+                               options of [key_sel] are\n\
+                                   0, 1 or OTPMK: OTPMK from FUSE or OTP(default),\n\
+                                   2 or ZMK: ZMK from SNVS,\n\
+                                   3 or CMK: CMK from SNVS,\n\
+                               For devices without SNVS, this option will be ignored.\n\
   key-provisioning <operation> [arguments...]\n\
                                <enroll>\n\
                                    Key provisioning enroll. No argument for this operation\n\
@@ -271,8 +293,12 @@ const char k_commandUsage[] =
                                <read_key_store> <file>\n\
                                    Read the key store from bootloader to host(PC). <file> is the\n\
                                    binary file to store the key store\n\
-  load-image <file>\n\
-                               Load a boot image to the device via specified interface\n\
+  fuse-program <index> [<file>[,byte_count]| {{<hex-data>}}]\n\
+                               Program fuse according to index from file\n\
+                               or string of hex values,\n\
+  fuse-read <index> <byte_count> [<file>]\n\
+                               Read fuse according to index and write to file\n\
+                               or stdout if no file specified\n\
   flash-image <file> [erase] [memory_id]\n\
                                Write a formated image <file> to memory with ID\n\
                                <memory_id>. Supported file types: SRecord\n\
@@ -283,28 +309,11 @@ const char k_commandUsage[] =
   list-memory                  List all on-chip Flash and RAM regions, and off-chip\n\
                                memories, supported by current device.\n\
                                Only the configured off-chip memory will be list.\n\
-  efuse-program-once <addr> <data> [nolock/lock]\n\
-                               Program one word of OCOTP Field \n\
-                               <addr> is ADDR of OTP word, not the shadowed memory address.\n\
-                               <data> is hex digits without prefix '0x'\n\
-  efuse-read-once <addr>\n\
-                               Read one word of OCOTP Field\n\
-                               <addr> is ADDR of OTP word, not the shadowed memory address.\n\
+  load-image <file>\n\
+                               Load a boot image to the device via specified interface\n\
   program-aeskey <file>\n\
                                Program AES key to OTP Field\n\
                                <file> is a raw binary contains an 128-bits key.\n\
-  generate-key-blob <dek_file> <blob_file> [key_sel]\n\
-                               Generate the Blob for a given DEK\n\
-                               <dek_file> - input, a binary DEK(128/192/256 bits) generated\n\
-                               by CST tool.\n\
-                               <blob_file> - output, a generated blob in binary format.\n\
-                               [key_sel] - optional input, select the BKEK used to wrap\n\
-                               the BK and generate the blob. For devices with SNVS, valid\n\
-                               options of [key_sel] are\n\
-                                   0, 1 or OTPMK: OTPMK from FUSE or OTP(default),\n\
-                                   2 or ZMK: ZMK from SNVS,\n\
-                                   3 or CMK: CMK from SNVS,\n\
-                               For devices without SNVS, this option will be ignored.\n\
 \n\
 ** Note that not all commands/properties are supported on all platforms.\n";
 
@@ -878,6 +887,7 @@ int BlHost::run()
     Command *cmd = NULL;
     Command *configCmd = NULL;
     Progress *progress = NULL;
+    Bootloader *bl = NULL;
     // Read command line options.
     int optionsResult;
     if ((optionsResult = processOptions()) != -1)
@@ -1003,7 +1013,7 @@ int BlHost::run()
         }
 
         // Init the Bootloader object.
-        Bootloader *bl = new Bootloader(config);
+        bl = new Bootloader(config);
 
         if (configCmd)
         {
@@ -1026,8 +1036,6 @@ int BlHost::run()
                     result = kStatus_NoResponse;
                 }
             }
-
-            delete configCmd;
         }
 
         if (cmd)
@@ -1051,11 +1059,7 @@ int BlHost::run()
                     result = kStatus_NoResponse;
                 }
             }
-
-            delete cmd;
         }
-
-        delete bl;
     }
     catch (exception &e)
     {
@@ -1063,6 +1067,18 @@ int BlHost::run()
         result = kStatus_Fail;
     }
 
+    if (configCmd)
+    {
+        delete configCmd;
+    }
+    if (cmd)
+    {
+        delete cmd;
+    }
+    if (bl)
+    {
+        delete bl;
+    }
     if (progress)
     {
         delete progress;

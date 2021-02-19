@@ -1,7 +1,8 @@
 #-----------------------------------------------
 # Make command:
-# make build=<build> all
+# make build=<build> cpu=<cpu> all
 # <build>: debug or release, release by default.
+# <cpu>: cpu architecure, cortex-a9 by default.
 #-----------------------------------------------
 
 #-----------------------------------------------
@@ -13,6 +14,35 @@ OUTPUT_ROOT := $(abspath ./)
 
 APP_NAME = blhost
 
+#-----------------------------------------------
+# Toolchain
+# ----------------------------------------------
+# GNU Cross Compiler (No linux lib is available)
+#PREFIX := arm-none-eabi-
+# Linaro Linux-Tageted GNU C Cross Compiler (libudev is not available)
+PREFIX := arm-linux-gnueabi-
+# Freescale i.MX GNU C Cross Compiler
+#PREFIX := arm-poky-linux-gnueabi-
+#SYSROOT := /opt/fsl-imx-xwayland/5.4-zeus/sysroots/cortexa9t2hf-neon-poky-linux-gnueabi
+
+ifneq ($(filter X86%, $(shell uname -m | tr a-z A-Z)),)
+# Cross Compiling
+CC := $(PREFIX)gcc
+CPP := $(PREFIX)cpp
+CXX := $(PREFIX)g++
+AS := $(PREFIX)as
+# DO NOT use ld.
+LD := $(PREFIX)g++
+else
+# DO NOT use ld.
+LD := g++
+endif
+
+#-----------------------------------------------
+# Architecture
+# cortex-a9 by default
+#-----------------------------------------------
+CPU ?= cortex-a9
 
 #-----------------------------------------------
 # Debug or Release
@@ -38,9 +68,8 @@ INCLUDES += $(BOOT_ROOT)/tools/blhost/src \
 			$(BOOT_ROOT)/src/drivers/common \
 			$(BOOT_ROOT)/src/bm_usb
 
-CXXFLAGS := -D LINUX -D BOOTLOADER_HOST -D LPCUSBSIO -std=c++11
-CFLAGS   := -std=c99 -D LINUX -D BOOTLOADER_HOST -D LPCUSBSIO -D _GNU_SOURCE
-LD       := g++
+CXXFLAGS := -D LINUX -D BOOTLOADER_HOST -D __ARM__ -std=c++11
+CFLAGS   := -D LINUX -D BOOTLOADER_HOST -D __ARM__ -D _GNU_SOURCE -std=c99
 LIBS     :=
 
 SOURCES := $(BOOT_ROOT)/tools/blhost/src/blhost.cpp \
@@ -60,8 +89,6 @@ SOURCES := $(BOOT_ROOT)/tools/blhost/src/blhost.cpp \
 		   $(BOOT_ROOT)/src/blfwk/src/hid-linux.c \
 		   $(BOOT_ROOT)/src/blfwk/src/jsoncpp.cpp \
 		   $(BOOT_ROOT)/src/blfwk/src/Logging.cpp \
-		   $(BOOT_ROOT)/src/blfwk/src/LpcUsbSio.cpp \
-		   $(BOOT_ROOT)/src/blfwk/src/LpcUsbSioPeripheral.cpp \
 		   $(BOOT_ROOT)/src/blfwk/src/options.cpp \
 		   $(BOOT_ROOT)/src/blfwk/src/SBSourceFile.cpp  \
 		   $(BOOT_ROOT)/src/blfwk/src/SearchPath.cpp  \
@@ -78,12 +105,21 @@ SOURCES := $(BOOT_ROOT)/tools/blhost/src/blhost.cpp \
 		   $(BOOT_ROOT)/src/blfwk/src/UartPeripheral.cpp \
 		   $(BOOT_ROOT)/src/blfwk/src/UsbHidPacketizer.cpp \
 		   $(BOOT_ROOT)/src/blfwk/src/UsbHidPeripheral.cpp \
+		   $(BOOT_ROOT)/src/blfwk/src/i2c.c \
+		   $(BOOT_ROOT)/src/blfwk/src/I2cPeripheral.cpp \
+		   $(BOOT_ROOT)/src/blfwk/src/spi.c \
+		   $(BOOT_ROOT)/src/blfwk/src/SpiPeripheral.cpp \
 		   $(BOOT_ROOT)/src/blfwk/src/utils.cpp \
 		   $(BOOT_ROOT)/src/blfwk/src/Value.cpp \
 		   $(BOOT_ROOT)/src/crc/src/crc16.c \
 		   $(BOOT_ROOT)/src/crc/src/crc32.c 
 
-LIBS += $(BOOT_ROOT)/src/middleware/lpcusbsio/bin/linux/lpcusbsio.a
+# LPC USB Serial I/O is not supported by ARM Linux blhost.
+#SOURCES += $(BOOT_ROOT)/src/blfwk/src/LpcUsbSio.cpp \
+		   $(BOOT_ROOT)/src/blfwk/src/LpcUsbSioPeripheral.cpp
+#CFLAGS += -D LPCUSBSIO
+#CXXFLAGS += -D LPCUSBSIO
+#LIBS += $(BOOT_ROOT)/src/middleware/lpcusbsio/bin/arm_linux/lpcusbsio.a
 
 INCLUDES := $(foreach includes, $(INCLUDES), -I $(includes))
 
@@ -94,6 +130,18 @@ CXXFLAGS += -g
 LDFLAGS += -g
 else
 DEBUG_OR_RELEASE := Release
+endif
+
+ifneq ($(filter X86%, $(shell uname -m | tr a-z A-Z)),)
+# GNU Cross Compiler
+# Linaro Linux-Tageted GNU C Cross Compiler
+CFLGAS += -mcpu=$(CPU)
+CXXFLGAS += -mcpu=$(CPU)
+LDFLGAS += -mcpu=$(CPU)
+# Freescale i.MX GNU C Cross Compiler
+# CFLGAS += -mfloat-abi=hard -mcpu=$(CPU) --sysroot=$(SYSROOT)
+# CXXFLGAS += -mfloat-abi=hard -mcpu=$(CPU) --sysroot=$(SYSROOT)
+# LDFLGAS += -mfloat-abi=hard -mcpu=$(CPU) --sysroot=$(SYSROOT)
 endif
 
 TARGET_OUTPUT_ROOT := $(OUTPUT_ROOT)/$(DEBUG_OR_RELEASE)

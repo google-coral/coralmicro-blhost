@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2013-2014 Freescale Semiconductor, Inc.
+ * Copyright 2015-2020 NXP.
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -280,6 +281,23 @@ protected:
     //! \param [in] data A vector<uchar> refernce that contains the data to be written to the device.
     //! \param [in] address The address on the device where the data will be written.
     void writeMemory(uint32_t address, const uchar_vector_t &data);
+
+    //! \brief Execute the write-memory bootloader command.
+    //!
+    //! \exception  std::runtime_error  Thrown if an error occurred while sending the
+    //!                                 WriteMemory(segment) bootloader command.
+    //!
+    //! \param [in,out] segment The DatSource::Segment that represents the data to be written to the device.
+    void fuseProgram(DataSource::Segment *segment);
+
+    //! \brief Execute the write-memory bootloader command.
+    //!
+    //! \exception  std::runtime_error  Thrown if an error occurred while sending the
+    //!                                 WriteMemory(vector<uint8_t) bootloader command.
+    //!
+    //! \param [in] data A vector<uchar> refernce that contains the data to be written to the device.
+    //! \param [in] address The address on the device where the data will be written.
+    void fuseProgram(uint32_t address, const uchar_vector_t &data);
 
     //! \brief Program flash procedure for SourceFile types.
     status_t flashFromSourceFile();

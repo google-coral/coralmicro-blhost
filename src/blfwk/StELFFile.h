@@ -7,20 +7,22 @@
 #if !defined(_StELFFile_h_)
 #define _StELFFile_h_
 
-#include "blfwk/stdafx.h"
+#include <iostream>
+#include <map>
+#include <stdexcept>
 #include <string>
 #include <vector>
-#include <map>
-#include <iostream>
-#include <stdexcept>
+
 #include "blfwk/ELF.h"
+#include "blfwk/stdafx.h"
 
 //! Variations of the ARM ELF format.
 typedef enum
 {
-    eARMVariant = 1, //!< Standard ARM ELF specification.
-    eGHSVariant,     //!< Green Hills Software variant.
-    eGCCVariant      //!< GNU Compiler Collection variant.
+    eIllegalVariant = 0, //!< Illegal variant.
+    eARMVariant = 1,     //!< Standard ARM ELF specification.
+    eGHSVariant,         //!< Green Hills Software variant.
+    eGCCVariant          //!< GNU Compiler Collection variant.
 } ELFVariant_t;
 
 //! Possible ARM ELF symbol types.

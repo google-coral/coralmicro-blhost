@@ -1,16 +1,19 @@
 /*
  * Copyright (c) 2013-2014 Freescale Semiconductor, Inc.
+ * Copyright 2015-2020 NXP
  * All rights reserved.
  *
- * 
+ *
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
 #include <ctype.h>
+
 #include <algorithm>
+
 #include "blfwk/ELFSourceFile.h"
-#include "blfwk/Logging.h"
 #include "blfwk/GHSSecInfo.h"
+#include "blfwk/Logging.h"
 #ifdef LINUX
 #include <string.h>
 #endif
@@ -38,9 +41,7 @@ ELFSourceFile::ELFSourceFile(const std::string &path)
 {
 }
 
-ELFSourceFile::~ELFSourceFile()
-{
-}
+ELFSourceFile::~ELFSourceFile() {}
 
 bool ELFSourceFile::isELFFile(std::istream &stream)
 {
@@ -226,40 +227,49 @@ DataSource *ELFSourceFile::createDataSource(const std::vector<uint32_t> &baseAdd
         }
     }
 
-    // We start at section 1 to skip the null section that is always first.
-    unsigned index = 1;
-    for (; index < m_file->getSectionCount(); ++index)
+    try
     {
-        const Elf32_Shdr &header = m_file->getSectionAtIndex(index);
-        std::string name = m_file->getSectionNameAtIndex(header.sh_name);
-
-        // Ignore most section types
-        if (!(header.sh_type == SHT_PROGBITS || header.sh_type == SHT_NOBITS))
+        // We start at section 1 to skip the null section that is always first.
+        unsigned index = 1;
+        for (; index < m_file->getSectionCount(); ++index)
         {
-            continue;
-        }
+            const Elf32_Shdr &header = m_file->getSectionAtIndex(index);
+            std::string name = m_file->getSectionNameAtIndex(header.sh_name);
 
-        // Ignore sections that don't have the allocate flag set.
-        if ((header.sh_flags & SHF_ALLOC) == 0)
-        {
-            continue;
-        }
+            // Ignore most section types
+            if (!(header.sh_type == SHT_PROGBITS || header.sh_type == SHT_NOBITS))
+            {
+                continue;
+            }
 
-        bool contains = std::find(baseAddresses.begin(), baseAddresses.end(), header.sh_addr) != baseAddresses.end();
+            // Ignore sections that don't have the allocate flag set.
+            if ((header.sh_flags & SHF_ALLOC) == 0)
+            {
+                continue;
+            }
 
-        // If we are not matching the supplied address then we will add any section that does not have the baseAddress
-        // If we are matching we will only include the section that matches the baseAddress
-        if ((!match && !contains) || (match && contains))
-        {
-            Log::log(Logger::kDebug2, "creating segment for section %s with base address = 0x%08X\n", name.c_str(),
-                     header.sh_addr);
-            source->addSection(index);
+            bool contains =
+                std::find(baseAddresses.begin(), baseAddresses.end(), header.sh_addr) != baseAddresses.end();
+
+            // If we are not matching the supplied address then we will add any section that does not have the
+            // baseAddress If we are matching we will only include the section that matches the baseAddress
+            if ((!match && !contains) || (match && contains))
+            {
+                Log::log(Logger::kDebug2, "creating segment for section %s with base address = 0x%08X\n", name.c_str(),
+                         header.sh_addr);
+                source->addSection(index);
+            }
+            else
+            {
+                Log::log(Logger::kDebug2, "section %s with base address of 0x%08X is excluded\n", name.c_str(),
+                         header.sh_addr);
+            }
         }
-        else
-        {
-            Log::log(Logger::kDebug2, "section %s with base address of 0x%08X is excluded\n", name.c_str(),
-                     header.sh_addr);
-        }
+    }
+    catch (...)
+    {
+        delete source;
+        throw;
     }
 
     Log::log(Logger::kDebug2, "\n");
@@ -274,35 +284,42 @@ DataSource *ELFSourceFile::createDataSource(StringMatcher &matcher)
     source->setSecinfoOption(m_secinfoOption);
 
     Log::log(Logger::kDebug2, "filtering sections of file: %s\n", getPath().c_str());
-
-    // We start at section 1 to skip the null section that is always first.
-    unsigned index = 1;
-    for (; index < m_file->getSectionCount(); ++index)
+    try
     {
-        const Elf32_Shdr &header = m_file->getSectionAtIndex(index);
-        std::string name = m_file->getSectionNameAtIndex(header.sh_name);
+        // We start at section 1 to skip the null section that is always first.
+        unsigned index = 1;
+        for (; index < m_file->getSectionCount(); ++index)
+        {
+            const Elf32_Shdr &header = m_file->getSectionAtIndex(index);
+            std::string name = m_file->getSectionNameAtIndex(header.sh_name);
 
-        // Ignore most section types
-        if (!(header.sh_type == SHT_PROGBITS || header.sh_type == SHT_NOBITS))
-        {
-            continue;
-        }
+            // Ignore most section types
+            if (!(header.sh_type == SHT_PROGBITS || header.sh_type == SHT_NOBITS))
+            {
+                continue;
+            }
 
-        // Ignore sections that don't have the allocate flag set.
-        if ((header.sh_flags & SHF_ALLOC) == 0)
-        {
-            continue;
-        }
+            // Ignore sections that don't have the allocate flag set.
+            if ((header.sh_flags & SHF_ALLOC) == 0)
+            {
+                continue;
+            }
 
-        if (matcher.match(name))
-        {
-            Log::log(Logger::kDebug2, "creating segment for section %s\n", name.c_str());
-            source->addSection(index);
+            if (matcher.match(name))
+            {
+                Log::log(Logger::kDebug2, "creating segment for section %s\n", name.c_str());
+                source->addSection(index);
+            }
+            else
+            {
+                Log::log(Logger::kDebug2, "section %s did not match\n", name.c_str());
+            }
         }
-        else
-        {
-            Log::log(Logger::kDebug2, "section %s did not match\n", name.c_str());
-        }
+    }
+    catch (...)
+    {
+        delete source;
+        throw;
     }
 
     return source;

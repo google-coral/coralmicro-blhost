@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2013-2014 Freescale Semiconductor, Inc.
- * Copyright 2019 NXP
+ * Copyright 2015-2020 NXP
  * All rights reserved.
  *
  *
@@ -34,14 +34,15 @@ bool UartPeripheral::init(const char *port, long speed)
 {
     assert(port);
 
-    strcpy(UartPeripheral::port_name, const_cast<char *>(port));
+    port_name = (char *)malloc(strlen(port) + 1 /*'\0'*/);
+    strcpy(port_name, const_cast<char *>(port));
 
     if (m_fileDescriptor != -1)
     {
         serial_close(m_fileDescriptor);
     }
     // Open the port.
-    m_fileDescriptor = serial_open(UartPeripheral::port_name);
+    m_fileDescriptor = serial_open(port_name);
     if (m_fileDescriptor == -1)
     {
         return false;
@@ -65,6 +66,10 @@ UartPeripheral::~UartPeripheral()
     if (m_fileDescriptor != -1)
     {
         serial_close(m_fileDescriptor);
+    }
+    if (port_name)
+    {
+        free(port_name);
     }
 }
 

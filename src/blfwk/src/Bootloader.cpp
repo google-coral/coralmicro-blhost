@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2013-2014 Freescale Semiconductor, Inc.
- * Copyright 2020 - 2022 NXP
+ * Copyright 2015-2020 NXP
  * All rights reserved.
  *
  *
@@ -89,10 +89,18 @@ Bootloader::Bootloader(const Peripheral::PeripheralConfigData &config)
         }
         case Peripheral::kHostPeripheralType_USB_HID:
         {
-            UsbHidPeripheral *peripheral = new UsbHidPeripheral(
-                config.usbHidVid, config.usbHidPid, config.usbHidSerialNumber.c_str(), config.usbPath.c_str());
-            m_hostPacketizer = new UsbHidPacketizer(peripheral, config.packetTimeoutMs);
-
+            UsbHidPeripheral *peripheral = NULL;
+            try
+            {
+                peripheral = new UsbHidPeripheral(config.usbHidVid, config.usbHidPid, config.usbHidSerialNumber.c_str(),
+                                                  config.usbPath.c_str());
+                m_hostPacketizer = new UsbHidPacketizer(peripheral, config.packetTimeoutMs);
+            }
+            catch (...)
+            {
+                delete peripheral;
+                throw;
+            }
             break;
         }
 #if defined(LINUX) && defined(__ARM__)
@@ -202,8 +210,11 @@ Bootloader::~Bootloader()
     flush();
 
     // Delete packetizer should close handles and free memory on Peripheral.
-    delete m_hostPacketizer;
-    m_hostPacketizer = NULL;
+    if (m_hostPacketizer)
+    {
+        delete m_hostPacketizer;
+        m_hostPacketizer = NULL;
+    }
 }
 
 // See host_bootloader.h for documentation of this method.

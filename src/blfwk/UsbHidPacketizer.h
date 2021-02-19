@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2013-2014 Freescale Semiconductor, Inc.
+ * Copyright 2015-2020 NXP.
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -31,11 +32,7 @@ public:
     enum _usbhid_contants
     {
         kReadFlushTimeoutMs = 100000,
-#if defined(BL_WITHOUT_RECEIVE_SB_FILE_CMD)
-        kPollAbortTimeoutMs = 0,
-#else
         kPollAbortTimeoutMs = 10,
-#endif
         kPollPacketMaxRetryCnt = 50,
         kContinuousReadMargin = 2,
     };

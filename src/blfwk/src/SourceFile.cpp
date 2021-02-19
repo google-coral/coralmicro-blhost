@@ -2,18 +2,19 @@
  * Copyright (c) 2013-2014 Freescale Semiconductor, Inc.
  * All rights reserved.
  *
- * 
+ *
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
 #include <assert.h>
-#include "blfwk/SourceFile.h"
-#include "blfwk/SearchPath.h"
+
 #include "blfwk/ELFSourceFile.h"
 #include "blfwk/EndianUtilities.h"
-#include "blfwk/SRecordSourceFile.h"
-#include "blfwk/SBSourceFile.h"
 #include "blfwk/IntelHexSourceFile.h"
+#include "blfwk/SBSourceFile.h"
+#include "blfwk/SRecordSourceFile.h"
+#include "blfwk/SearchPath.h"
+#include "blfwk/SourceFile.h"
 #include "blfwk/format_string.h"
 
 using namespace blfwk;
